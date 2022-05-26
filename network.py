@@ -99,7 +99,7 @@ class generator(nn.Module):
 
 class generator_att(nn.Module):
     def __init__(self, dim_in = 3, dim_out = 3, hidden_dim = 64):
-        super(generator, self).__init__()
+        super(generator_att, self).__init__()
         self.in_conv = nn.Sequential(
             nn.Conv2d(dim_in, hidden_dim, kernel_size = 7, stride = 1, padding = 3),
             nn.InstanceNorm2d(hidden_dim),
@@ -168,6 +168,8 @@ class generator_att(nn.Module):
         self.out_conv = nn.Sequential(
             nn.Conv2d(hidden_dim, dim_out, kernel_size = 7, stride = 1, padding = 3),
         )
+        self.tanh = nn.Tanh()
+        
 
     def forward(self, x):
         in_down = self.in_conv(x)
@@ -181,7 +183,8 @@ class generator_att(nn.Module):
         out_res_content = F.pad(out_res_content, (3, 3, 3, 3), 'reflect')
         content = self.deconv3_content(out_res_content)
         image_mask = self.tanh(content)
-        
+
+
         image_mask1 = image_mask[:, 0:3, :, :]
         print("image_mask1.size()")
         print(image_mask1.size()) # [1, 3, 256, 256]
@@ -231,12 +234,12 @@ class generator_att(nn.Module):
         output7 = image_mask7 * attention_mask7
         output8 = image_mask8 * attention_mask8
         output9 = image_mask9 * attention_mask9
-        output10 = input * attention_mask10
+        output10 = x * attention_mask10
         
         AllOutPut = output1 + output2 + output3 + output4 + output5 + output6 + output7 + output8 + output9 + output10
         
-        return AllOutPut, output1, output2, output3, output4, output5, output6, output7, output8, output9, output10, attention_mask1,attention_mask2,attention_mask3, attention_mask4, attention_mask5, attention_mask6, attention_mask7, attention_mask8,attention_mask9,attention_mask10, image_mask1, image_mask2,image_mask3,image_mask4,image_mask5,image_mask6,image_mask7,image_mask8,image_mask9
-
+        # return AllOutPut, output1, output2, output3, output4, output5, output6, output7, output8, output9, output10, attention_mask1,attention_mask2,attention_mask3, attention_mask4, attention_mask5, attention_mask6, attention_mask7, attention_mask8,attention_mask9,attention_mask10, image_mask1, image_mask2,image_mask3,image_mask4,image_mask5,image_mask6,image_mask7,image_mask8,image_mask9
+        return AllOutPut
         # out_up = self.up_conv(out_res)
         # output = self.out_conv(out_up)
         # return output

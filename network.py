@@ -186,8 +186,8 @@ class generator_att(nn.Module):
 
 
         image_mask1 = image_mask[:, 0:3, :, :]
-        print("image_mask1.size()")
-        print(image_mask1.size()) # [1, 3, 256, 256]
+        # print("image_mask1.size()")
+        # print(image_mask1.size()) # [1, 3, 256, 256]
         image_mask2 = image_mask[:, 3:6, :, :]
         image_mask3 = image_mask[:, 6:9, :, :]
         image_mask4 = image_mask[:, 9:12, :, :]
@@ -213,8 +213,8 @@ class generator_att(nn.Module):
         attention_mask10_ = attention_mask[:, 9:10, :, :]
         
         attention_mask1 = attention_mask1_.repeat(1, 3, 1, 1)
-        print("attention_mask1.size()")
-        # print(attention_mask1.size())
+        # print("attention_mask1.size()")
+        # # print(attention_mask1.size())
         attention_mask2 = attention_mask2_.repeat(1, 3, 1, 1)
         attention_mask3 = attention_mask3_.repeat(1, 3, 1, 1)
         attention_mask4 = attention_mask4_.repeat(1, 3, 1, 1)

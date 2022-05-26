@@ -19,6 +19,8 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument('--test', action='store_true',
                     help='use this command to test generator')
+parser.add_argument('--num_epoch', type=int, default=100,
+                    help='num of training epoch')                    
 
 parser.add_argument('--init_num_epoch', type=int, default=10,
                     help='num of initialization epoch')

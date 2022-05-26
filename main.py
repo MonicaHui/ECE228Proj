@@ -17,7 +17,7 @@ import network, util
 
 parser = argparse.ArgumentParser()
 
-parser.add_argument('--test', type=int, action='store_true',
+parser.add_argument('--test', action='store_true',
                     help='use this command to test generator')
 
 parser.add_argument('--init_num_epoch', type=int, default=10,

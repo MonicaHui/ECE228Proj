@@ -185,7 +185,7 @@ def train_gray():
             
             D_adv_c = sig(D(cart))
             D_adv_e = sig(D(cart_smooth))
-            D_adv_g = sig(D(gen_cart))
+            D_adv_g = sig(D(gen_cart.detach()))
 
             D_adv_c_loss = BCE(D_adv_c, Variable(torch.ones(D_adv_c.size()).to(device)))
             D_adv_e_loss = BCE(D_adv_e, Variable(torch.zeros(D_adv_e.size()).to(device)))     
@@ -194,7 +194,7 @@ def train_gray():
 
             D_loss = D_adv_c_loss + D_adv_e_loss + D_adv_g_loss
 
-            D_loss.backward(retain_graph=True) 
+            D_loss.backward() 
             D_optimizer.step()
 
             # train generator
@@ -313,7 +313,7 @@ def train():
             
             D_adv_c = sig(D(cart))
             D_adv_e = sig(D(cart_smooth))
-            D_adv_g = sig(D(gen_cart))
+            D_adv_g = sig(D(gen_cart.detach()))
 
             D_adv_c_loss = BCE(D_adv_c, Variable(torch.ones(D_adv_c.size()).to(device)))
             D_adv_e_loss = BCE(D_adv_e, Variable(torch.zeros(D_adv_e.size()).to(device)))     
@@ -322,7 +322,7 @@ def train():
 
             D_loss = D_adv_c_loss + D_adv_e_loss + D_adv_g_loss
 
-            D_loss.backward(retain_graph=True) 
+            D_loss.backward() 
             D_optimizer.step()
 
             # train generator

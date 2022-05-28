@@ -26,28 +26,24 @@ parser.add_argument('--init_num_epoch', type=int, default=10,
                     help='num of initialization epoch')
 parser.add_argument('--batch_size', type=int, default=4, help='batch size')
 parser.add_argument('--root_path', default="./result", help='save path')
-parser.add_argument('--lr_G', type=float, default=0.0002,
+parser.add_argument('--lr_G', type=float, default=0.0001,
                     help='learning rate of Generator')
-parser.add_argument('--lr_D', type=float, default=0.0002,
+parser.add_argument('--lr_D', type=float, default=0.0001,
                     help='learning rate of Discriminator')
 parser.add_argument('--gamma_G', type=float, default=0.1, help='gamma_G')
 parser.add_argument('--gamma_D', type=float, default=0.1, help='gamma_D')
 parser.add_argument('--beta_1', type=float, default=0.5, help='beta_1')
 parser.add_argument('--beta_2', type=float, default=0.99, help='beta_2')
 parser.add_argument('--cont_lambda', type=float, default=10, help='cont_lambda')
-parser.add_argument('--gray_lambda', type=float, default=15, help='gray_lambda')
-parser.add_argument('--load_model', type=bool, default=False, help='load previous model')
-parser.add_argument('--is_pretrained', type=bool, default=False, help='is pretrained')
+parser.add_argument('--gray_lambda', type=float, default=20, help='gray_lambda')
+parser.add_argument('--load_model', type=bool, default=True, help='load previous model')
+parser.add_argument('--is_pretrained', type=bool, default=True, help='is pretrained')
 parser.add_argument('--is_smoothed', type=bool, default=True, help='is smoothed')
-parser.add_argument('--start_epoch', type=int, default=0, help='start from which epoch')
-parser.add_argument('--use_att', type=bool, default=True, help='use generator_att')
+parser.add_argument('--start_epoch', type=int, default=22, help='start from which epoch')
 
 opt = parser.parse_args()
 
-if opt.use_att:
-        G = network.generator_att()
-else:
-    G = network.generator()
+G = network.generator_att()
 D = network.discriminator()
 
 
@@ -58,6 +54,7 @@ BCE = nn.BCELoss().to(device)
 sig = nn.Sigmoid().to(device)
 L1 = nn.L1Loss().to(device)
 tahn = nn.Tanh().to(device)
+huber = nn.HuberLoss().to(device)
 
 G_optimizer = optim.Adam(G.parameters(), lr = opt.lr_G,
                          betas=(opt.beta_1, opt.beta_2))
@@ -85,7 +82,7 @@ transform = transforms.Compose([
 src_path = "./data/real/train"
 cart_path = "./data/cartoon/train"
 cart_smooth_path = "./data/cartoon/edge_smoothed"
-test_path = "./data/test"
+test_path = "./data/real/test"
 
 if not opt.is_smoothed:
     if not os.path.isdir(cart_smooth_path):
@@ -93,10 +90,14 @@ if not opt.is_smoothed:
     util.edge_smooth(cart_path, cart_smooth_path)
 
 
-src_loader = torch.utils.data.DataLoader(datasets.ImageFolder(src_path, transform), batch_size=opt.batch_size, shuffle=True, drop_last=True)
-cartoon_loader = torch.utils.data.DataLoader(datasets.ImageFolder(cart_path, transform), batch_size=opt.batch_size, shuffle=True, drop_last=True)
-cartoon_smooth_loader = torch.utils.data.DataLoader(datasets.ImageFolder(cart_smooth_path, transform), batch_size=opt.batch_size, shuffle=True, drop_last=True)
-test_loader=torch.utils.data.DataLoader(datasets.ImageFolder(test_path, transform), batch_size=opt.batch_size, shuffle=True, drop_last=True)
+src_loader = torch.utils.data.DataLoader(datasets.ImageFolder(src_path, transform), batch_size=opt.batch_size, shuffle=False, drop_last=True)
+cartoon_loader = torch.utils.data.DataLoader(datasets.ImageFolder(cart_path, transform), batch_size=opt.batch_size, shuffle=False, drop_last=True)
+cartoon_smooth_loader = torch.utils.data.DataLoader(datasets.ImageFolder(cart_smooth_path,transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize(
+                mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
+            ])), batch_size=opt.batch_size, shuffle=False, drop_last=True)
+test_loader=torch.utils.data.DataLoader(datasets.ImageFolder(test_path, transform), batch_size=opt.batch_size, shuffle=False, drop_last=True)
 
 
 def pretrain():
@@ -175,9 +176,13 @@ def train_gray():
         D_losses = []
         Cont_losses = []
         Gray_losses = []
-        for i, img in enumerate(zip(src_loader, cartoon_loader, cartoon_smooth_loader)):
+        for i, img in enumerate(zip(src_loader,cartoon_smooth_loader)):
             
-            src, cart, cart_smooth = img[0][0], img[1][0], img[2][0]
+            src, cartoon = img[0][0], img[1][0]
+#             print(cartoon.shape)
+#             print(cartoon)
+            cart = cartoon[:,:,:,0:256]
+            cart_smooth = cartoon[:,:,:,256:]
             src = src.to(device)
             cart = cart.to(device)
             cart_smooth = cart_smooth.to(device)
@@ -215,7 +220,7 @@ def train_gray():
             G_adv_loss = BCE(G_adv, Variable(torch.ones(G_adv.size()).to(device)))
         
             # cal gray loss 
-            gray = transforms.functional.rgb_to_grayscale(src)
+            gray = transforms.functional.rgb_to_grayscale(cart)
             gray = gray.to(device)
             
             gray_input = Variable(torch.zeros(src.size()).to(device))
@@ -230,6 +235,12 @@ def train_gray():
             gen_cart_gram = util.cal_gram(gen_feature)
             
             Gray_loss = opt.gray_lambda * L1(gray_gram, gen_cart_gram)
+            
+            # yuv_gen = rgb_to_yuv(gen_cart)
+            # yuv_cart = rgb_to_yuv(cart)
+            
+            # color_loss = L1
+            # (yuv_cart[:,:,:,0], yuv_gen[:,:,:,0]) + huber(con[:,:,:,1],fake[:,:,:,1]) + huber(con[:,:,:,2],fake[:,:,:,2])
 
             G_loss = Cont_loss + G_adv_loss + Gray_loss
             

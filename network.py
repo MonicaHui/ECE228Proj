@@ -153,7 +153,7 @@ class generator_att(nn.Module):
             nn.InstanceNorm2d(hidden_dim),
             nn.ReLU(inplace=True)
         )
-        self.deconv3_content = nn.Conv2d(hidden_dim, 27, 7, 1, 0)
+        self.deconv3_content = nn.Conv2d(hidden_dim, 30, 7, 1, 0)
         
         self.up_conv_attention = nn.Sequential(
             nn.ConvTranspose2d(hidden_dim * 4, hidden_dim * 2, 3, 2, 1, 1),
@@ -173,6 +173,7 @@ class generator_att(nn.Module):
             nn.Conv2d(hidden_dim, dim_out, kernel_size = 7, stride = 1, padding = 3),
         )
         self.tanh = nn.Tanh()
+        init_weight(self)
         
 
     def forward(self, x):
@@ -281,10 +282,27 @@ class discriminator(nn.Module):
         self.out_conv = nn.Sequential(
             nn.Conv2d(hidden_dim * 8, dim_out, kernel_size = 3, stride = 1, padding = 1),
         )
+        init_weight(self)
 
     def forward(self, x):
         x = self.flat_conv(x)
         x = self.down_conv(x)
         output = self.out_conv(x)
         return output
+    
+    
+    
+def init_weight(model):
+    for m in model.modules():
+        if isinstance(m, nn.Conv2d):
+            m.weight.data.normal_(0, 0.02)
+            m.bias.data.zero_()
+        elif isinstance(m, nn.Linear):
+            m.weight.data.normal_(0, 0.02)
+            m.bias.data.zero_()
+ 
+        elif isinstance(m, nn.ConvTranspose2d):
+            m.weight.data.normal_(0, 0.02)
+            m.bias.data.zero_()
+
 

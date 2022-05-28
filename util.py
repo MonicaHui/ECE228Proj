@@ -16,10 +16,10 @@ def edge_smooth(in_path, out_path):
                 transforms.Normalize(
                 mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
             ])
-    cartoon_loader = torch.utils.data.DataLoader(datasets.ImageFolder(in_path, transform), batch_size=1)
-    for i, img in enumerate(cartoon_loader):
+    cartoon_loader = torch.utils.data.DataLoader(datasets.ImageFolder(in_path, transform), batch_size=1, shuffle = False)
+    for i, src in enumerate(cartoon_loader):
         # use canny to abstract edges
-        img = img[0][0].numpy().transpose(1, 2, 0)
+        img = src[0][0].numpy().transpose(1, 2, 0)
         img_int = ((img + 1) / 2 * 255).astype(np.uint8)
 #         filename = "img_int.png"
 #         path = os.path.join("./result", filename)
@@ -78,6 +78,15 @@ def edge_smooth(in_path, out_path):
         out_edge[:,:,2] = img_int[:,:,2] * thre_img
         
         out = out_edge + guass_edge_region
+#         print(src[0][0].shape)
+#         print(out.shape)
+
+#         print(out)
+        out = out / 256
+        img_ = (img + 1) / 2
+        result = np.concatenate((img_, out), axis=1)
+#         print(result.shape)
+        
         filename = "smoothed_%s.png" % i
         if not os.path.isdir(os.path.join(out_path, "1/")):
             os.mkdir(os.path.join(out_path, "1/"))
@@ -85,8 +94,8 @@ def edge_smooth(in_path, out_path):
         path = os.path.join(out_path, "1", filename)
         
 #         print(path)
-        
-        cv2.imwrite(path, out)
+        plt.imsave(path, result)
+#         cv2.imwrite(path, result)
                  
 
 
@@ -98,6 +107,42 @@ def cal_gram(x):
     gram = torch.bmm(x_flat, x_flat_t)
     return gram / (channel * height * width)
         
+    
+    
+def rgb_to_yuv(image: torch.Tensor) -> torch.Tensor:
+    r"""Convert an RGB image to YUV.
+
+    .. image:: _static/img/rgb_to_yuv.png
+
+    The image data is assumed to be in the range of (0, 1).
+
+    Args:
+        image: RGB Image to be converted to YUV with shape :math:`(*, 3, H, W)`.
+
+    Returns:
+        YUV version of the image with shape :math:`(*, 3, H, W)`.
+
+    Example:
+        >>> input = torch.rand(2, 3, 4, 5)
+        >>> output = rgb_to_yuv(input)  # 2x3x4x5
+    """
+    if not isinstance(image, torch.Tensor):
+        raise TypeError(f"Input type is not a torch.Tensor. Got {type(image)}")
+
+    if len(image.shape) < 3 or image.shape[-3] != 3:
+        raise ValueError(f"Input size must have a shape of (*, 3, H, W). Got {image.shape}")
+
+    r: torch.Tensor = image[..., 0, :, :]
+    g: torch.Tensor = image[..., 1, :, :]
+    b: torch.Tensor = image[..., 2, :, :]
+
+    y: torch.Tensor = 0.299 * r + 0.587 * g + 0.114 * b
+    u: torch.Tensor = -0.147 * r - 0.289 * g + 0.436 * b
+    v: torch.Tensor = 0.615 * r - 0.515 * g - 0.100 * b
+
+    out: torch.Tensor = torch.stack([y, u, v], -3)
+
+    return out
         
         
         

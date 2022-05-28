@@ -40,10 +40,14 @@ parser.add_argument('--load_model', type=bool, default=False, help='load previou
 parser.add_argument('--is_pretrained', type=bool, default=False, help='is pretrained')
 parser.add_argument('--is_smoothed', type=bool, default=True, help='is smoothed')
 parser.add_argument('--start_epoch', type=int, default=0, help='start from which epoch')
+parser.add_argument('--use_att', type=bool, default=True, help='use generator_att')
 
 opt = parser.parse_args()
 
-G = network.generator()
+if opt.use_att:
+        G = network.generator_att()
+else:
+    G = network.generator()
 D = network.discriminator()
 
 

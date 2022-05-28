@@ -144,10 +144,12 @@ class generator_att(nn.Module):
         
         self.up_conv_content = nn.Sequential(
             nn.ConvTranspose2d(hidden_dim * 4, hidden_dim * 2, 3, 2, 1, 1),
+            nn.Conv2d(hidden_dim * 2, hidden_dim * 2, kernel_size = 3, stride = 1, padding = 1),
             nn.InstanceNorm2d(hidden_dim * 2),
             nn.ReLU(inplace=True),
             
             nn.ConvTranspose2d(hidden_dim * 2, hidden_dim, 3, 2, 1, 1),
+            nn.Conv2d(hidden_dim, hidden_dim, kernel_size = 3, stride = 1, padding = 1),
             nn.InstanceNorm2d(hidden_dim),
             nn.ReLU(inplace=True)
         )
@@ -155,10 +157,12 @@ class generator_att(nn.Module):
         
         self.up_conv_attention = nn.Sequential(
             nn.ConvTranspose2d(hidden_dim * 4, hidden_dim * 2, 3, 2, 1, 1),
+            nn.Conv2d(hidden_dim * 2, hidden_dim * 2, kernel_size = 3, stride = 1, padding = 1),
             nn.InstanceNorm2d(hidden_dim * 2),
             nn.ReLU(inplace=True),
             
             nn.ConvTranspose2d(hidden_dim * 2, hidden_dim, 3, 2, 1, 1),
+            nn.Conv2d(hidden_dim, hidden_dim, kernel_size = 3, stride = 1, padding = 1),
             nn.InstanceNorm2d(hidden_dim),
             nn.ReLU(inplace=True),
             nn.Conv2d(hidden_dim, 10, 1, 1, 0),
@@ -196,6 +200,7 @@ class generator_att(nn.Module):
         image_mask7 = image_mask[:, 18:21, :, :]
         image_mask8 = image_mask[:, 21:24, :, :]
         image_mask9 = image_mask[:, 24:27, :, :]
+        image_mask10 = image_mask[:, 27:30, :, :]
         
         out_res_attention = self.up_conv_attention(out_res)
         softmax_ = torch.nn.Softmax(dim=1)
@@ -234,7 +239,7 @@ class generator_att(nn.Module):
         output7 = image_mask7 * attention_mask7
         output8 = image_mask8 * attention_mask8
         output9 = image_mask9 * attention_mask9
-        output10 = x * attention_mask10
+        output10 = image_mask10 * attention_mask10
         
         AllOutPut = output1 + output2 + output3 + output4 + output5 + output6 + output7 + output8 + output9 + output10
         

@@ -8,7 +8,7 @@ from torchvision import transforms
 from torchvision import datasets
 
 
-
+# for cartoon image
 def edge_smooth(in_path, out_path):
     transform = transforms.Compose([
                 transforms.Resize((256, 256)),
@@ -19,7 +19,8 @@ def edge_smooth(in_path, out_path):
     cartoon_loader = torch.utils.data.DataLoader(datasets.ImageFolder(in_path, transform), batch_size=1, shuffle = False)
     for i, src in enumerate(cartoon_loader):
         # use canny to abstract edges
-        img = src[0][0].numpy().transpose(1, 2, 0)
+        print("start smooth")
+        img = img[0][0].numpy().transpose(1, 2, 0)
         img_int = ((img + 1) / 2 * 255).astype(np.uint8)
 #         filename = "img_int.png"
 #         path = os.path.join("./result", filename)
@@ -41,8 +42,8 @@ def edge_smooth(in_path, out_path):
 #         print("edge: ", edges)
         
         # dilate
-        kernel_big = np.ones((7,7), np.uint8)
-        kernel_small = np.ones((5,5), np.uint8)
+        kernel_big = np.ones((5,5), np.uint8)
+        kernel_small = np.ones((3,3), np.uint8)
         edge_dilation = cv2.dilate(edges, kernel_big, iterations=1)
         edge_small = cv2.dilate(edges, kernel_small, iterations=1)
         
@@ -59,7 +60,7 @@ def edge_smooth(in_path, out_path):
 #         cv2.imwrite(path, edge_region)
         
         # apply a Gaussian smoothing in the dilated edge regions
-        guass_edge = cv2.GaussianBlur(edge_region, (3, 3), 0, 0);
+        guass_edge = cv2.GaussianBlur(edge_region, (5, 5), 0, 0)
         guass_edge_region = np.zeros(guass_edge.shape)
         edge_small = np.clip(edge_small, 0, 1)
         guass_edge_region[:,:,0] = guass_edge[:,:,0] * edge_small

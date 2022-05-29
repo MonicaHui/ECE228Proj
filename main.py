@@ -38,8 +38,8 @@ parser.add_argument('--cont_lambda', type=float, default=10, help='cont_lambda')
 parser.add_argument('--gray_lambda', type=float, default=20, help='gray_lambda')
 parser.add_argument('--adv_lambda', type=float, default=5, help='adv_lambda for generator')
 parser.add_argument('--load_model', type=bool, default=False, help='load previous model')
-parser.add_argument('--is_pretrained', type=bool, default=False, help='is pretrained')
-parser.add_argument('--is_smoothed', type=bool, default=False, help='is smoothed')
+parser.add_argument('--is_pretrained', type=bool, default=True, help='is pretrained')
+parser.add_argument('--is_smoothed', type=bool, default=True, help='is smoothed')
 parser.add_argument('--start_epoch', type=int, default=0, help='start from which epoch')
 
 opt = parser.parse_args()
@@ -164,6 +164,7 @@ def train_gray():
     train_hist['D_losses'] = []
     train_hist['Cont_losses'] = []
     train_hist['Gray_losses'] = []
+    train_hist['Color_losses'] = []
     if opt.load_model:
         load_model(os.path.join('models/', "model.ckpt"))
 
@@ -175,6 +176,7 @@ def train_gray():
         D_losses = []
         Cont_losses = []
         Gray_losses = []
+        Color_losses = []
         for i, img in enumerate(zip(src_loader,cartoon_smooth_loader)):
             
             src, cartoon = img[0][0], img[1][0]
@@ -235,13 +237,17 @@ def train_gray():
             
             Gray_loss = opt.gray_lambda * L1(gray_gram, gen_cart_gram)
             
-#             yuv_gen = rgb_to_yuv(gen_cart)
-#             yuv_cart = rgb_to_yuv(cart)
+            yuv_gen = util.rgb_to_yuv(gen_cart)
+            yuv_src = util.rgb_to_yuv(src)
             
-#             color_loss = L1
-#             (yuv_cart[:,:,:,0], yuv_gen[:,:,:,0]) + huber(con[:,:,:,1],fake[:,:,:,1]) + huber(con[:,:,:,2],fake[:,:,:,2])
+#             Color_loss = 0
+#             print(yuv_gen)
+#             print(yuv_src)
+            
+            Color_loss = L1(yuv_src[:,0,:,:], yuv_gen[:,0,:,:])+ huber(yuv_src[:,1,:,:],yuv_gen[:,1,:,:]) + huber(yuv_src[:,2,:,:],yuv_gen[:,2,:,:])
+#             print(Color_loss)
 
-            G_loss = Cont_loss + G_adv_loss + Gray_loss
+            G_loss = Cont_loss + G_adv_loss + Gray_loss + Color_loss
             
             G_loss.backward()
             G_optimizer.step()
@@ -252,15 +258,17 @@ def train_gray():
             D_losses.append(D_loss.item())
             Cont_losses.append(Cont_loss.item())
             Gray_losses.append(Gray_loss.item())
+            Color_losses.append(Gray_loss.item())
             
             train_hist['G_losses'].append(G_loss.item())
             train_hist['D_losses'].append(D_loss.item())
             train_hist['Cont_losses'].append(Cont_loss.item())
             train_hist['Gray_losses'].append(Gray_loss.item())
+            train_hist['Color_losses'].append(Color_loss.item())
             
 
             if i % 50 == 0:
-                print("i: %s, G_loss: %.3f, D_loss: %.3f, Content_loss: %.3f, Gray_loss: %.3f" % (i, G_loss.item(),D_loss.item(),Cont_loss.item(),Gray_loss.item()))
+                print("i: %s, G_loss: %.3f, D_loss: %.3f, Content_loss: %.3f, Gray_loss: %.3f, Color_loss: %.3f" % (i, G_loss.item(),D_loss.item(),Cont_loss.item(),Gray_loss.item(),Color_loss.item()))
                 real = src[0].cpu().detach().numpy().transpose(1, 2, 0)
                 cart = gen_cart[0].cpu().detach().numpy().transpose(1, 2, 0)
                 result = np.concatenate((real, cart), axis=1)
@@ -281,9 +289,10 @@ def train_gray():
         average_D_loss = np.mean(D_losses)
         average_cont_loss = np.mean(Cont_losses)
         average_gray_loss = np.mean(Gray_losses)
+        average_color_loss = np.mean(Color_losses)
 
 
-        print("epoch: %s, epoch time: %0.3f, G_loss: %.3f, D_loss: %.3f, Content_loss: %.3f, Gray_loss: %.3f" % (epoch,epoch_time,average_G_loss,average_D_loss,average_cont_loss, average_gray_loss))
+        print("epoch: %s, epoch time: %0.3f, G_loss: %.3f, D_loss: %.3f, Content_loss: %.3f, Gray_loss: %.3f, Color_loss: %.3f" % (epoch,epoch_time,average_G_loss,average_D_loss,average_cont_loss, average_gray_loss, average_color_loss))
         if not os.path.isdir('models/'):
                 os.mkdir('models/')
 

@@ -8,7 +8,7 @@ from torchvision import transforms
 from torchvision import datasets
 
 
-# for cartoon image
+
 def edge_smooth(in_path, out_path):
     transform = transforms.Compose([
                 transforms.Resize((256, 256)),
@@ -19,8 +19,7 @@ def edge_smooth(in_path, out_path):
     cartoon_loader = torch.utils.data.DataLoader(datasets.ImageFolder(in_path, transform), batch_size=1, shuffle = False)
     for i, src in enumerate(cartoon_loader):
         # use canny to abstract edges
-        print("start smooth")
-        img = img[0][0].numpy().transpose(1, 2, 0)
+        img = src[0][0].numpy().transpose(1, 2, 0)
         img_int = ((img + 1) / 2 * 255).astype(np.uint8)
 #         filename = "img_int.png"
 #         path = os.path.join("./result", filename)

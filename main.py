@@ -36,10 +36,11 @@ parser.add_argument('--beta_1', type=float, default=0.5, help='beta_1')
 parser.add_argument('--beta_2', type=float, default=0.99, help='beta_2')
 parser.add_argument('--cont_lambda', type=float, default=10, help='cont_lambda')
 parser.add_argument('--gray_lambda', type=float, default=20, help='gray_lambda')
-parser.add_argument('--load_model', type=bool, default=True, help='load previous model')
-parser.add_argument('--is_pretrained', type=bool, default=True, help='is pretrained')
-parser.add_argument('--is_smoothed', type=bool, default=True, help='is smoothed')
-parser.add_argument('--start_epoch', type=int, default=22, help='start from which epoch')
+parser.add_argument('--adv_lambda', type=float, default=5, help='adv_lambda for generator')
+parser.add_argument('--load_model', type=bool, default=False, help='load previous model')
+parser.add_argument('--is_pretrained', type=bool, default=False, help='is pretrained')
+parser.add_argument('--is_smoothed', type=bool, default=False, help='is smoothed')
+parser.add_argument('--start_epoch', type=int, default=0, help='start from which epoch')
 
 opt = parser.parse_args()
 
@@ -80,7 +81,6 @@ transform = transforms.Compose([
             ])
 
 src_path = "./data/real/train"
-cart_path = "./data/cartoon/train"
 cart_smooth_path = "./data/cartoon/edge_smoothed"
 test_path = "./data/real/test"
 
@@ -90,14 +90,13 @@ if not opt.is_smoothed:
     util.edge_smooth(cart_path, cart_smooth_path)
 
 
-src_loader = torch.utils.data.DataLoader(datasets.ImageFolder(src_path, transform), batch_size=opt.batch_size, shuffle=False, drop_last=True)
-cartoon_loader = torch.utils.data.DataLoader(datasets.ImageFolder(cart_path, transform), batch_size=opt.batch_size, shuffle=False, drop_last=True)
+src_loader = torch.utils.data.DataLoader(datasets.ImageFolder(src_path, transform), batch_size=opt.batch_size, shuffle=True, drop_last=True)
 cartoon_smooth_loader = torch.utils.data.DataLoader(datasets.ImageFolder(cart_smooth_path,transforms.Compose([
                 transforms.ToTensor(),
                 transforms.Normalize(
                 mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
-            ])), batch_size=opt.batch_size, shuffle=False, drop_last=True)
-test_loader=torch.utils.data.DataLoader(datasets.ImageFolder(test_path, transform), batch_size=opt.batch_size, shuffle=False, drop_last=True)
+            ])), batch_size=opt.batch_size, shuffle=True, drop_last=True)
+# test_loader=torch.utils.data.DataLoader(datasets.ImageFolder(test_path, transform), batch_size=opt.batch_size, shuffle=False, drop_last=True)
 
 
 def pretrain():
@@ -109,10 +108,9 @@ def pretrain():
         Cont_losses = []
         
 
-        for i, img in enumerate(zip(src_loader, cartoon_loader)):
-            src, cart = img[0][0], img[1][0]
+        for i, img in enumerate(src_loader):
+            src = img[0][0]
             src = src.to(device)
-            cart = cart.to(device)
 
             #train generator
             G_optimizer.zero_grad()
@@ -136,7 +134,7 @@ def pretrain():
                 cart = gen_cart[0].cpu().detach().numpy().transpose(1, 2, 0)
                 result = np.concatenate((real, cart), axis=1)
                 result = (result + 1) / 2
-                filename = "during_pretrain_%s_%s.png" % (epoch, i)
+                filename = "pretrain_%s_%s.png" % (epoch, i)
                 path = os.path.join("./result", filename)
                 plt.imsave(path, result)
 
@@ -217,7 +215,7 @@ def train_gray():
             Cont_loss = opt.cont_lambda * L1(src_feature, gen_feature)
 
             G_adv = sig(G_adv)
-            G_adv_loss = BCE(G_adv, Variable(torch.ones(G_adv.size()).to(device)))
+            G_adv_loss = opt.adv_lambda * BCE(G_adv, Variable(torch.ones(G_adv.size()).to(device)))
         
             # cal gray loss 
             gray = transforms.functional.rgb_to_grayscale(cart)
@@ -236,11 +234,11 @@ def train_gray():
             
             Gray_loss = opt.gray_lambda * L1(gray_gram, gen_cart_gram)
             
-            # yuv_gen = rgb_to_yuv(gen_cart)
-            # yuv_cart = rgb_to_yuv(cart)
+#             yuv_gen = rgb_to_yuv(gen_cart)
+#             yuv_cart = rgb_to_yuv(cart)
             
-            # color_loss = L1
-            # (yuv_cart[:,:,:,0], yuv_gen[:,:,:,0]) + huber(con[:,:,:,1],fake[:,:,:,1]) + huber(con[:,:,:,2],fake[:,:,:,2])
+#             color_loss = L1
+#             (yuv_cart[:,:,:,0], yuv_gen[:,:,:,0]) + huber(con[:,:,:,1],fake[:,:,:,1]) + huber(con[:,:,:,2],fake[:,:,:,2])
 
             G_loss = Cont_loss + G_adv_loss + Gray_loss
             
@@ -271,7 +269,7 @@ def train_gray():
                 result = (result + 1) / 2
                 if not os.path.isdir('result/'):
                     os.mkdir('result/')
-                filename = "during_train_%s_%s.png" % (epoch, i)
+                filename = "train_%s_%s.png" % (epoch, i)
                 path = os.path.join("./result", filename)
                 plt.imsave(path, result)
         
@@ -314,9 +312,12 @@ def train():
         G_losses = []
         D_losses = []
         Cont_losses = []
-        for i, img in enumerate(zip(src_loader, cartoon_loader, cartoon_smooth_loader)):
+        for i, img in enumerate(zip(src_loader,cartoon_smooth_loader)):           
+            src, cartoon = img[0][0], img[1][0]
+
+            cart = cartoon[:,:,:,0:256]
+            cart_smooth = cartoon[:,:,:,256:]
             
-            src, cart, cart_smooth = img[0][0], img[1][0], img[2][0]
             src = src.to(device)
             cart = cart.to(device)
             cart_smooth = cart_smooth.to(device)
@@ -351,7 +352,7 @@ def train():
             Cont_loss = opt.cont_lambda * L1(src_feature, gen_feature)
 
             G_adv = sig(G_adv)
-            G_adv_loss = BCE(G_adv, Variable(torch.ones(G_adv.size()).to(device)))
+            G_adv_loss = opt.adv_lambda * BCE(G_adv, Variable(torch.ones(G_adv.size()).to(device)))
 
             G_loss = Cont_loss + G_adv_loss
             
@@ -379,7 +380,7 @@ def train():
                 result = (result + 1) / 2
                 if not os.path.isdir('result/'):
                     os.mkdir('result/')
-                filename = "during_train_%s_%s.png" % (epoch, i)
+                filename = "train_%s_%s.png" % (epoch, i)
                 path = os.path.join("./result", filename)
                 plt.imsave(path, result)
         

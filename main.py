@@ -83,7 +83,7 @@ transform = transforms.Compose([
 src_path = "./data/real/train"
 cart_path= "./data/cartoon/train"
 cart_smooth_path = "./data/cartoon/edge_smoothed"
-test_path = "./data/real/test"
+test_path = "./data/test"
 
 if not opt.is_smoothed:
     if not os.path.isdir(cart_smooth_path):
@@ -97,7 +97,7 @@ cartoon_smooth_loader = torch.utils.data.DataLoader(datasets.ImageFolder(cart_sm
                 transforms.Normalize(
                 mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
             ])), batch_size=opt.batch_size, shuffle=True, drop_last=True)
-# test_loader=torch.utils.data.DataLoader(datasets.ImageFolder(test_path, transform), batch_size=opt.batch_size, shuffle=False, drop_last=True)
+test_loader=torch.utils.data.DataLoader(datasets.ImageFolder(test_path, transform), batch_size=opt.batch_size, shuffle=False, drop_last=True)
 
 
 def pretrain():

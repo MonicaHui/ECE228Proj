@@ -38,8 +38,8 @@ parser.add_argument('--cont_lambda', type=float, default=10, help='cont_lambda')
 parser.add_argument('--gray_lambda', type=float, default=20, help='gray_lambda')
 parser.add_argument('--adv_lambda', type=float, default=5, help='adv_lambda for generator')
 parser.add_argument('--load_model', type=bool, default=False, help='load previous model')
-parser.add_argument('--is_pretrained', type=bool, default=False, help='is pretrained')
-parser.add_argument('--is_smoothed', type=bool, default=False, help='is smoothed')
+parser.add_argument('--is_pretrained', type=bool, default=True, help='is pretrained')
+parser.add_argument('--is_smoothed', type=bool, default=True, help='is smoothed')
 parser.add_argument('--start_epoch', type=int, default=0, help='start from which epoch')
 
 opt = parser.parse_args()
@@ -240,9 +240,12 @@ def train_gray():
             yuv_gen = util.rgb_to_yuv(gen_cart)
             yuv_src = util.rgb_to_yuv(src)
             
-            Color_loss = 0
-            # Color_loss = L1
-            # (yuv_src[:,:,:,0], yuv_gen[:,:,:,0]) + huber(yuv_src[:,:,:,1],yuv_gen[:,:,:,1]) + huber(yuv_src[:,:,:,2],yuv_gen[:,:,:,2])
+#             Color_loss = 0
+#             print(yuv_gen)
+#             print(yuv_src)
+            
+            Color_loss = L1(yuv_src[:,0,:,:], yuv_gen[:,0,:,:])+ huber(yuv_src[:,1,:,:],yuv_gen[:,1,:,:]) + huber(yuv_src[:,2,:,:],yuv_gen[:,2,:,:])
+#             print(Color_loss)
 
             G_loss = Cont_loss + G_adv_loss + Gray_loss + Color_loss
             

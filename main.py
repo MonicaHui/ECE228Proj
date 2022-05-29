@@ -81,6 +81,7 @@ transform = transforms.Compose([
             ])
 
 src_path = "./data/real/train"
+cart_path= "./data/cartoon/train"
 cart_smooth_path = "./data/cartoon/edge_smoothed"
 test_path = "./data/real/test"
 

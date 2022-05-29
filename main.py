@@ -109,7 +109,7 @@ def pretrain():
         
 
         for i, img in enumerate(src_loader):
-            src = img[0][0]
+            src = img[0]
             src = src.to(device)
 
             #train generator

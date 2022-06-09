@@ -96,7 +96,7 @@ class generator(nn.Module):
     
     
     
-
+# our model
 class generator_att(nn.Module):
     def __init__(self, dim_in = 3, dim_out = 3, hidden_dim = 64):
         super(generator_att, self).__init__()
@@ -130,18 +130,8 @@ class generator_att(nn.Module):
             ResidualBlock(dim_in=hidden_dim * 4, dim_out=hidden_dim * 4)
         )
 
-        self.up_conv = nn.Sequential(
-            nn.ConvTranspose2d(hidden_dim * 4, hidden_dim * 2, kernel_size = 3, stride = 2, padding = 1, output_padding = 1),
-            nn.Conv2d(hidden_dim * 2, hidden_dim * 2, kernel_size = 3, stride = 1, padding = 1),
-            nn.InstanceNorm2d(hidden_dim * 2),
-            nn.ReLU(inplace=True),
 
-            nn.ConvTranspose2d(hidden_dim * 2, hidden_dim, kernel_size = 3, stride = 2, padding = 1, output_padding = 1),
-            nn.Conv2d(hidden_dim, hidden_dim, kernel_size = 3, stride = 1, padding = 1),
-            nn.InstanceNorm2d(hidden_dim),
-            nn.ReLU(inplace=True)
-        )
-        
+        # two branch of up-sample blocks
         self.up_conv_content = nn.Sequential(
             nn.ConvTranspose2d(hidden_dim * 4, hidden_dim * 2, 3, 2, 1, 1),
             nn.Conv2d(hidden_dim * 2, hidden_dim * 2, kernel_size = 3, stride = 1, padding = 1),
@@ -191,8 +181,6 @@ class generator_att(nn.Module):
 
 
         image_mask1 = image_mask[:, 0:3, :, :]
-        # print("image_mask1.size()")
-        # print(image_mask1.size()) # [1, 3, 256, 256]
         image_mask2 = image_mask[:, 3:6, :, :]
         image_mask3 = image_mask[:, 6:9, :, :]
         image_mask4 = image_mask[:, 9:12, :, :]
@@ -246,9 +234,7 @@ class generator_att(nn.Module):
         
         # return AllOutPut, output1, output2, output3, output4, output5, output6, output7, output8, output9, output10, attention_mask1,attention_mask2,attention_mask3, attention_mask4, attention_mask5, attention_mask6, attention_mask7, attention_mask8,attention_mask9,attention_mask10, image_mask1, image_mask2,image_mask3,image_mask4,image_mask5,image_mask6,image_mask7,image_mask8,image_mask9
         return AllOutPut
-        # out_up = self.up_conv(out_res)
-        # output = self.out_conv(out_up)
-        # return output
+
 
 
 

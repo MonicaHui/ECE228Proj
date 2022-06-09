@@ -37,6 +37,7 @@ parser.add_argument('--beta_2', type=float, default=0.99, help='beta_2')
 parser.add_argument('--cont_lambda', type=float, default=10, help='cont_lambda')
 parser.add_argument('--gray_lambda', type=float, default=20, help='gray_lambda')
 parser.add_argument('--adv_lambda', type=float, default=5, help='adv_lambda for generator')
+parser.add_argument('--add_attention', type=bool, default=False, help='use generator_att')
 parser.add_argument('--load_model', type=bool, default=False, help='load previous model')
 parser.add_argument('--is_pretrained', type=bool, default=False, help='is pretrained')
 parser.add_argument('--is_smoothed', type=bool, default=False, help='is smoothed')
@@ -44,7 +45,11 @@ parser.add_argument('--start_epoch', type=int, default=0, help='start from which
 
 opt = parser.parse_args()
 
-G = network.generator_att()
+if opt.add_attention:
+    G = network.generator_att() # use our model
+else:
+    G = network.generator() # structure from CartoonGAN
+
 D = network.discriminator()
 
 
@@ -67,12 +72,13 @@ D.to(device)
 
 vgg = vgg19(pretrained=False)
 vgg.load_state_dict(torch.load('./vgg19.pth'))
-# conv4_4
-# print(vgg)
+
+# extract feature from VGG19 conv4_4
 vgg = vgg.features[:26]
 vgg.to(device)
 vgg.eval()
 
+# normolization
 transform = transforms.Compose([
                 transforms.Resize((256, 256)),
                 transforms.ToTensor(),
@@ -97,9 +103,9 @@ cartoon_smooth_loader = torch.utils.data.DataLoader(datasets.ImageFolder(cart_sm
                 transforms.Normalize(
                 mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])
             ])), batch_size=opt.batch_size, shuffle=True, drop_last=True)
-# test_loader=torch.utils.data.DataLoader(datasets.ImageFolder(test_path, transform), batch_size=opt.batch_size, shuffle=False, drop_last=True)
+test_loader=torch.utils.data.DataLoader(datasets.ImageFolder(test_path, transform), batch_size=opt.batch_size, shuffle=False, drop_last=True)
 
-
+# use content loss to pre-train generator
 def pretrain():
     print("start pretrain")
     train_hist = {}
@@ -113,7 +119,7 @@ def pretrain():
             src = img[0]
             src = src.to(device)
 
-            #train generator
+            # train generator
             G_optimizer.zero_grad()
             gen_cart = tahn(G(src))
 
@@ -156,9 +162,9 @@ def pretrain():
 
 
 
-
+# our model
 def train_gray():
-    print("start training -- add gray loss")
+    print("start training -- add gray loss, color loss")
     train_hist = {}
     train_hist['G_losses'] = []
     train_hist['D_losses'] = []
@@ -178,8 +184,6 @@ def train_gray():
         for i, img in enumerate(zip(src_loader,cartoon_smooth_loader)):
             
             src, cartoon = img[0][0], img[1][0]
-#             print(cartoon.shape)
-#             print(cartoon)
             cart = cartoon[:,:,:,0:256]
             cart_smooth = cartoon[:,:,:,256:]
             src = src.to(device)
@@ -209,8 +213,6 @@ def train_gray():
             G_optimizer.zero_grad()
 
             G_adv = D(gen_cart)
-#             print(src.shape)
-#             print(gen_cart.shape)
             src_feature = vgg(src)
             gen_feature = vgg(gen_cart)
             Cont_loss = opt.cont_lambda * L1(src_feature, gen_feature)
@@ -235,13 +237,13 @@ def train_gray():
             
             Gray_loss = opt.gray_lambda * L1(gray_gram, gen_cart_gram)
             
-#             yuv_gen = rgb_to_yuv(gen_cart)
-#             yuv_cart = rgb_to_yuv(cart)
+            # cal color loss 
+            yuv_gen = util.rgb_to_yuv(gen_cart)
+            yuv_src = util.rgb_to_yuv(src)
             
-#             color_loss = L1
-#             (yuv_cart[:,:,:,0], yuv_gen[:,:,:,0]) + huber(con[:,:,:,1],fake[:,:,:,1]) + huber(con[:,:,:,2],fake[:,:,:,2])
+            Color_loss = L1(yuv_src[:,0,:,:], yuv_gen[:,0,:,:])+ huber(yuv_src[:,1,:,:],yuv_gen[:,1,:,:]) + huber(yuv_src[:,2,:,:],yuv_gen[:,2,:,:])
 
-            G_loss = Cont_loss + G_adv_loss + Gray_loss
+            G_loss = Cont_loss + G_adv_loss + Gray_loss + Color_loss
             
             G_loss.backward()
             G_optimizer.step()
@@ -264,9 +266,6 @@ def train_gray():
                 real = src[0].cpu().detach().numpy().transpose(1, 2, 0)
                 cart = gen_cart[0].cpu().detach().numpy().transpose(1, 2, 0)
                 result = np.concatenate((real, cart), axis=1)
-#                 print(real.shape)
-#                 print(cart.shape)
-#                 print(result.shape)
                 result = (result + 1) / 2
                 if not os.path.isdir('result/'):
                     os.mkdir('result/')
@@ -295,7 +294,7 @@ def train_gray():
                 'D_optim_state': D_optimizer.state_dict(),
             }, save_path)
 
-        
+ # original CartoonGAN       
 def train():
 
     print("start training")
@@ -346,8 +345,6 @@ def train():
             G_optimizer.zero_grad()
 
             G_adv = D(gen_cart)
-#             print(src.shape)
-#             print(gen_cart.shape)
             src_feature = vgg(src)
             gen_feature = vgg(gen_cart)
             Cont_loss = opt.cont_lambda * L1(src_feature, gen_feature)
@@ -375,9 +372,6 @@ def train():
                 real = src[0].cpu().detach().numpy().transpose(1, 2, 0)
                 cart = gen_cart[0].cpu().detach().numpy().transpose(1, 2, 0)
                 result = np.concatenate((real, cart), axis=1)
-#                 print(real.shape)
-#                 print(cart.shape)
-#                 print(result.shape)
                 result = (result + 1) / 2
                 if not os.path.isdir('result/'):
                     os.mkdir('result/')

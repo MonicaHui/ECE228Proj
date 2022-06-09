@@ -10,6 +10,13 @@ from torchvision import datasets
 
 
 def edge_smooth(in_path, out_path):
+    '''
+    apply edge smooth on the original cartoon img
+
+    Args:
+        in_path : path of input cartoon img
+        out_path : path of output, original cartoon img concatenate with smoothed img 
+    '''
     transform = transforms.Compose([
                 transforms.Resize((256, 256)),
                 transforms.ToTensor(),
@@ -21,24 +28,15 @@ def edge_smooth(in_path, out_path):
         # use canny to abstract edges
         img = src[0][0].numpy().transpose(1, 2, 0)
         img_int = ((img + 1) / 2 * 255).astype(np.uint8)
-#         filename = "img_int.png"
-#         path = os.path.join("./result", filename)
-#         cv2.imwrite(path, img_int)
-#         print(img.shape)
+
         gray = cv2.cvtColor(img_int,cv2.COLOR_BGR2GRAY)
         
         filename = "gray.png"
         path = os.path.join("./result", filename)
 
-#         gray = ((gray + 1) / 2 * 255).astype(np.uint8)
         cv2.imwrite(path, gray)
-#         print(gray)
         edges = cv2.Canny(gray,100,200)
-#         filename = "edge.png"
-#         path = os.path.join("./result", filename)
-#         cv2.imwrite(path, edges)
-        
-#         print("edge: ", edges)
+
         
         # dilate
         kernel_big = np.ones((5,5), np.uint8)
@@ -46,17 +44,11 @@ def edge_smooth(in_path, out_path):
         edge_dilation = cv2.dilate(edges, kernel_big, iterations=1)
         edge_small = cv2.dilate(edges, kernel_small, iterations=1)
         
-#         filename = "edge_dilation.png"
-#         path = os.path.join("./result", filename)
-#         cv2.imwrite(path, edge_dilation)
         edge_region = np.zeros(img.shape)
         edge_dilation = np.clip(edge_dilation, 0, 1)
         edge_region[:,:,0] = img_int[:,:,0] * edge_dilation
         edge_region[:,:,1] = img_int[:,:,1] * edge_dilation
         edge_region[:,:,2] = img_int[:,:,2] * edge_dilation
-#         filename = "edge_region.png"
-#         path = os.path.join("./result", filename)
-#         cv2.imwrite(path, edge_region)
         
         # apply a Gaussian smoothing in the dilated edge regions
         guass_edge = cv2.GaussianBlur(edge_region, (5, 5), 0, 0)
@@ -66,9 +58,6 @@ def edge_smooth(in_path, out_path):
         guass_edge_region[:,:,1] = guass_edge[:,:,1] * edge_small
         guass_edge_region[:,:,2] = guass_edge[:,:,2] * edge_small
         
-#         filename = "guass_edge.png"
-#         path = os.path.join("./result", filename)
-#         cv2.imwrite(path, guass_edge)
 
         thre_img = np.ones_like(edge_small) - edge_small
         
@@ -78,29 +67,34 @@ def edge_smooth(in_path, out_path):
         out_edge[:,:,2] = img_int[:,:,2] * thre_img
         
         out = out_edge + guass_edge_region
-#         print(src[0][0].shape)
-#         print(out.shape)
 
-#         print(out)
         out = out / 256
         img_ = (img + 1) / 2
         result = np.concatenate((img_, out), axis=1)
-#         print(result.shape)
+
         
         filename = "smoothed_%s.png" % i
         if not os.path.isdir(os.path.join(out_path, "1/")):
             os.mkdir(os.path.join(out_path, "1/"))
                  
         path = os.path.join(out_path, "1", filename)
-        
-#         print(path)
+
         plt.imsave(path, result)
-#         cv2.imwrite(path, result)
+
                  
 
 
         
 def cal_gram(x):
+    '''
+    calculate gram matrix of input image x
+
+    Args:
+        x : shape (*, channel, height, width) 
+    
+    Retures:
+        gram matrix, shape of (*, channel, channel) 
+    '''
     batch_size, channel, height, width = x.shape
     x_flat = x.reshape((batch_size, channel, -1))
     x_flat_t = torch.transpose(x_flat, 1, 2)
@@ -110,9 +104,7 @@ def cal_gram(x):
     
     
 def rgb_to_yuv(image: torch.Tensor) -> torch.Tensor:
-    r"""Convert an RGB image to YUV.
-
-    .. image:: _static/img/rgb_to_yuv.png
+    """Convert an RGB image to YUV.
 
     The image data is assumed to be in the range of (0, 1).
 
@@ -122,9 +114,6 @@ def rgb_to_yuv(image: torch.Tensor) -> torch.Tensor:
     Returns:
         YUV version of the image with shape :math:`(*, 3, H, W)`.
 
-    Example:
-        >>> input = torch.rand(2, 3, 4, 5)
-        >>> output = rgb_to_yuv(input)  # 2x3x4x5
     """
     if not isinstance(image, torch.Tensor):
         raise TypeError(f"Input type is not a torch.Tensor. Got {type(image)}")

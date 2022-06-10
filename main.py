@@ -95,6 +95,7 @@ test_path = "./data/real/test"
 if not opt.is_smoothed:
     if not os.path.isdir(cart_smooth_path):
         os.mkdir(cart_smooth_path)
+    print("start edge smoothing")
     util.edge_smooth(cart_path, cart_smooth_path)
 
 

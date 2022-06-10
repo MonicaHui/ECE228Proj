@@ -22,7 +22,7 @@ data
 
 ## Train
 ```
-python train.py \
+python main.py \
     --lr_G 0.0001 \
     --lr_D 0.0001 \
     --cont_lambda 10 \

@@ -37,7 +37,8 @@ parser.add_argument('--beta_2', type=float, default=0.99, help='beta_2')
 parser.add_argument('--cont_lambda', type=float, default=10, help='cont_lambda')
 parser.add_argument('--gray_lambda', type=float, default=20, help='gray_lambda')
 parser.add_argument('--adv_lambda', type=float, default=5, help='adv_lambda for generator')
-parser.add_argument('--add_attention', type=bool, default=False, help='use generator_att')
+parser.add_argument('--add_attention', type=bool, default=True, help='use generator_att')
+parser.add_argument('--add_losses', type=bool, default=True, help='add gray loss and color loss')
 parser.add_argument('--load_model', type=bool, default=False, help='load previous model')
 parser.add_argument('--is_pretrained', type=bool, default=False, help='is pretrained')
 parser.add_argument('--is_smoothed', type=bool, default=False, help='is smoothed')
@@ -442,8 +443,10 @@ def load_model(checkpoint_path):
 def main():
     if not opt.is_pretrained:
         pretrain()
-    train_gray()
-#     train()
+    if opt.add_losses:
+        train_gray()
+    else:
+        train()
     test()
 
 if __name__ == "__main__":

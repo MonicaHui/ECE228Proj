@@ -35,8 +35,8 @@ use default setting to run our model, train model without added losses by settin
 
 ## Reference
 reference from:\
-https://github.com/JackyWang2001/CartoonGAN_pytorch
-https://github.com/MonicaHui/Decompose-Distill-BeautyGAN
-https://github.com/Ha0Tang/AttentionGAN
+https://github.com/JackyWang2001/CartoonGAN_pytorch\
+https://github.com/MonicaHui/Decompose-Distill-BeautyGAN\
+https://github.com/Ha0Tang/AttentionGAN\
 https://github.com/TachibanaYoshino/AnimeGAN
 
